@@ -12,7 +12,8 @@ export default async function ServicesPage() {
 
   try {
     services = await getServices()
-  } catch {
+  } catch (err) {
+    console.error('[services/page] getServices failed:', err)
     error = 'Failed to connect to Traefik API at localhost:8080'
   }
 

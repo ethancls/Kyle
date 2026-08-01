@@ -36,7 +36,8 @@ export function ServiceActions({ name, running }: Props) {
       toast.success(`${labels[act]} ${name}`)
       await new Promise((r) => setTimeout(r, 2000))
       router.refresh()
-    } catch {
+    } catch (err) {
+      console.error(`[ServiceActions] ${act} ${name} failed:`, err)
       toast.error(`Failed to ${act} ${name}`)
     }
     setTimeout(() => setLoading(null), 1500)

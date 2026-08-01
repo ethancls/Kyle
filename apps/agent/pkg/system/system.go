@@ -13,7 +13,7 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logger"
+	"kyle/agent/pkg/logger"
 )
 
 const commandTimeout = 5 * time.Second

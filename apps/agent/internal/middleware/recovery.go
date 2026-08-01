@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logger"
+	"kyle/agent/pkg/logger"
 )
 
 // Recovery returns a middleware that recovers from panics and returns a 500 error

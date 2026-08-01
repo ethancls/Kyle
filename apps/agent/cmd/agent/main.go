@@ -9,12 +9,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/auth"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/config"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/middleware"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/routes"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/state"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logger"
+	"kyle/agent/internal/auth"
+	"kyle/agent/internal/config"
+	"kyle/agent/internal/middleware"
+	"kyle/agent/internal/routes"
+	"kyle/agent/internal/state"
+	"kyle/agent/pkg/logger"
 )
 
 func registerRoutes(mux *http.ServeMux, chain middleware.Middleware, handler *routes.Handler, authenticator *auth.Authenticator) {

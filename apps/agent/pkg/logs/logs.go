@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logger"
+	"kyle/agent/pkg/logger"
 )
 
 var (

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { cn } from '@lens/ui'
+import { cn } from '@kyle/ui'
 import {
   Lightning,
   Scroll,

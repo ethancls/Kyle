@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logger"
+	"kyle/agent/pkg/logger"
 	"github.com/joho/godotenv"
 )
 

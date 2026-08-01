@@ -16,8 +16,8 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./*"],
-      "@lens/shared": ["../../packages/shared/src"],
-      "@lens/ui": ["../../packages/ui/src"]
+      "@kyle/shared": ["../../packages/shared/src"],
+      "@kyle/ui": ["../../packages/ui/src"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/utils"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logger"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logs"
+	"kyle/agent/internal/utils"
+	"kyle/agent/pkg/logger"
+	"kyle/agent/pkg/logs"
 )
 
 // HandleAccessLogs handles requests for access logs.

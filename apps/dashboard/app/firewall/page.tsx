@@ -5,6 +5,8 @@ import useSWR from 'swr'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/page-header'
 import { ArrowsLeftRight, Trash } from '@phosphor-icons/react'
+import type { FirewallEntry } from '@kyle/shared'
+import { Badge } from '@kyle/ui'
 const FirewallIcon = ArrowsLeftRight
 
 const fetcher = (url: string) =>
@@ -12,14 +14,6 @@ const fetcher = (url: string) =>
     if (!r.ok) throw new Error('Failed')
     return r.json()
   })
-
-interface FirewallEntry {
-  target: string
-  type: string
-  reason?: string
-  added: string
-  expires: string
-}
 
 export default function FirewallPage() {
   const { data, mutate, isLoading } = useSWR('/api/firewall', fetcher, {
@@ -210,9 +204,7 @@ export default function FirewallPage() {
                   <tr key={entry.target} className="hover:bg-surface-raised/50 transition-colors">
                     <td className="py-2.5 px-3 text-text-primary font-mono text-xs">{entry.target}</td>
                     <td className="py-2.5 px-3">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-background ring-1 ring-black/[0.07] dark:ring-white/10 text-text-secondary">
-                        {entry.type}
-                      </span>
+                      <Badge variant="default">{entry.type}</Badge>
                     </td>
                     <td className="py-2.5 px-3 text-text-secondary text-xs max-w-[160px] truncate" title={entry.reason}>
                       {entry.reason || '--'}

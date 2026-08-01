@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/config"
+	"kyle/agent/internal/config"
 )
 
 // newTestConfig returns a Config with PositionFile set to a temp path inside

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { ArrowCounterClockwise } from '@phosphor-icons/react'
-import { cn } from '@lens/ui'
+import { cn } from '@kyle/ui'
 
 export function RefreshButton() {
   const router = useRouter()

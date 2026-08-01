@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import { PageHeader } from '@/components/layout/page-header'
-import { ThemeToggleWrapper } from '@/components/settings/theme-toggle-wrapper'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { Gear } from '@phosphor-icons/react/dist/ssr'
 
 export const metadata: Metadata = { title: 'Settings' }
 
 const AGENT_API_URL =
-  process.env.NEXT_PUBLIC_AGENT_API_URL ?? 'http://localhost:5000'
+  process.env.AGENT_API_URL ?? 'http://localhost:5000'
 const VERSION = '0.1.0'
 
 export default function SettingsPage() {
@@ -31,7 +31,7 @@ export default function SettingsPage() {
                 Toggle between light and dark mode
               </p>
             </div>
-            <ThemeToggleWrapper />
+            <ThemeToggle />
           </div>
         </section>
 

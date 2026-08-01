@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { cn } from '@lens/ui'
+import { cn } from '@kyle/ui'
 import {
   TrafficSign,
   Clock,
@@ -10,9 +10,16 @@ import {
 } from '@phosphor-icons/react'
 import { StatDrawer } from './stat-drawer'
 
-const iconMap = { traffic: TrafficSign, clock: Clock, warning: WarningCircle, globe: Cloud }
-
-type Analytics = { totalRequests: number; statusBreakdown: Record<string, number>; avgLatencyMs: string; errorRate: number } | null
+interface Analytics {
+  totalRequests: number
+  statusBreakdown: Record<string, number>
+  avgLatencyMs: string
+  errorRate: number
+  requestsPerMinute: number
+  requestsByHour: { hour: string; count: number }[]
+  latencyByHour: { hour: string; avgLatency: number }[]
+  latencyDist?: { bucket: string; count: number }[]
+}
 
 type DrawerContent = {
   type: string
@@ -21,15 +28,18 @@ type DrawerContent = {
   color: string
   runningNames: string[]
   stoppedNames: string[]
-  analytics: Analytics
+  analytics: Analytics | null
 }
 
 export function DashboardStats({
-  running, total, analytics, services: runningNames,
+  running, total, analytics, services: runningNames, stoppedNames,
 }: {
-  running: number; total: number; analytics: Analytics; services: string[]
+  running: number
+  total: number
+  analytics: Analytics | null
+  services: string[]
+  stoppedNames: string[]
 }) {
-  const stoppedNames = ['n8n'] // TODO: get from real data
   const [drawer, setDrawer] = useState<DrawerContent | null>(null)
 
   const open = (type: string, title: string, value: string, color: string) => {
@@ -38,27 +48,31 @@ export function DashboardStats({
 
   const stats = [
     {
-      key: 'traffic', label: 'Requests/min', Icon: TrafficSign,
-      value: analytics ? String(analytics.totalRequests) : '',
-      sub: '',
+      key: 'traffic',
+      label: 'Total Requests',
+      Icon: TrafficSign,
+      value: analytics ? analytics.totalRequests.toLocaleString() : '',
       color: 'text-text-secondary',
     },
     {
-      key: 'clock', label: 'Avg Latency', Icon: Clock,
+      key: 'clock',
+      label: 'Avg Latency',
+      Icon: Clock,
       value: analytics ? `${analytics.avgLatencyMs} ms` : '',
-      sub: '',
       color: 'text-accent-teal',
     },
     {
-      key: 'warning', label: 'Error Rate', Icon: WarningCircle,
+      key: 'warning',
+      label: 'Error Rate',
+      Icon: WarningCircle,
       value: analytics ? `${analytics.errorRate}%` : '',
-      sub: '',
       color: 'text-accent-orange',
     },
     {
-      key: 'globe', label: 'Active Services', Icon: Cloud,
+      key: 'globe',
+      label: 'Active Services',
+      Icon: Cloud,
       value: `${running}/${total}`,
-      sub: '',
       color: 'text-accent-purple',
     },
   ]
@@ -96,7 +110,18 @@ export function DashboardStats({
         })}
       </div>
 
-      {drawer && <StatDrawer type={drawer.type} title={drawer.title} value={drawer.value} color={drawer.color} running={drawer.runningNames} stopped={drawer.stoppedNames} analytics={drawer.analytics} onClose={() => setDrawer(null)} />}
+      {drawer && (
+        <StatDrawer
+          type={drawer.type}
+          title={drawer.title}
+          value={drawer.value}
+          color={drawer.color}
+          running={drawer.runningNames}
+          stopped={drawer.stoppedNames}
+          analytics={drawer.analytics}
+          onClose={() => setDrawer(null)}
+        />
+      )}
     </>
   )
 }

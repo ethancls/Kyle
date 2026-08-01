@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
       lat: data.lat ?? undefined,
       lng: data.lon ?? undefined,
     })
-  } catch {
+  } catch (err) {
+    console.error('[api/geo] GeoIP lookup failed:', err)
     return NextResponse.json({ error: 'GeoIP unreachable' }, { status: 502 })
   }
 }

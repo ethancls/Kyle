@@ -1,4 +1,4 @@
-// Shared types for Lens — Traefik Traffic Dashboard
+// Shared types for Kyle — Traefik Traffic Dashboard
 
 // ===== Agent API =====
 
@@ -63,21 +63,20 @@ export interface LogsResponse {
 
 // ===== Firewall =====
 
-export interface FirewallRule {
-  id: string
+/** Matches the Go agent's FirewallEntry JSON shape exactly */
+export interface FirewallEntry {
+  target: string
   type: 'ip' | 'range' | 'country'
-  value: string
   reason?: string
-  created: string
-  expires?: string
-  active: boolean
+  added: string
+  expires: string
 }
 
 export interface FirewallBlockRequest {
   type: 'ip' | 'range' | 'country'
   value: string
   reason?: string
-  duration?: string // e.g. "1h", "24h", "7d", "permanent"
+  duration?: string // "1h", "24h", "7d", "permanent"
 }
 
 // ===== Services =====
@@ -94,6 +93,17 @@ export interface ServiceInfo {
   avgLatencyMs: number
   url: string
   hostname?: string
+}
+
+// ===== Analytics =====
+
+export interface AnalyticsData {
+  totalRequests: number
+  statusBreakdown: Record<string, number>
+  topPaths: { path: string; count: number }[]
+  topHosts: { host: string; count: number }[]
+  avgLatencyMs: number
+  requestsPerMinute: number
 }
 
 // ===== Alerts =====

@@ -3,8 +3,8 @@ package routes
 import (
 	"sync/atomic"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/config"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/state"
+	"kyle/agent/internal/config"
+	"kyle/agent/internal/state"
 )
 
 // Handler manages HTTP routes and dependencies

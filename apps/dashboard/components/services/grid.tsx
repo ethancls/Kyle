@@ -1,5 +1,5 @@
 import { Globe, Plug, ArrowUpRight } from '@phosphor-icons/react/dist/ssr'
-import type { ServiceInfo } from '@lens/shared'
+import type { ServiceInfo } from '@kyle/shared'
 import { ServiceActions } from './actions'
 
 function portFromUrl(url: string): string | null {

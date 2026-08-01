@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/dashboard"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/utils"
+	"kyle/agent/internal/dashboard"
+	"kyle/agent/internal/utils"
 )
 
 // HandleNotify proxies notification requests to Discord/Telegram.

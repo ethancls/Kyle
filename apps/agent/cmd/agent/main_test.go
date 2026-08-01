@@ -7,11 +7,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/auth"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/config"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/middleware"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/routes"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/state"
+	"kyle/agent/internal/auth"
+	"kyle/agent/internal/config"
+	"kyle/agent/internal/middleware"
+	"kyle/agent/internal/routes"
+	"kyle/agent/internal/state"
 )
 
 func TestRootEndpoint(t *testing.T) {

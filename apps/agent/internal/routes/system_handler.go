@@ -3,9 +3,9 @@ package routes
 import (
 	"net/http"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/utils"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logs"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/system"
+	"kyle/agent/internal/utils"
+	"kyle/agent/pkg/logs"
+	"kyle/agent/pkg/system"
 )
 
 // HandleSystemLogs handles requests for system logs listing

@@ -1,4 +1,4 @@
-# Lens — Traefik Traffic Dashboard
+# Kyle — Traefik Traffic Dashboard
 
 Professional real-time analytics platform for Traefik reverse proxy logs.
 
@@ -14,7 +14,7 @@ pnpm dev
 ## Structure
 
 ```
-Lens/
+Kyle/
 ├── apps/
 │   ├── dashboard/    # Next.js 15 App Router
 │   └── agent/        # Go agent (forked from hhftechnology)

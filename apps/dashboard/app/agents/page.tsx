@@ -4,20 +4,18 @@ import useSWR from 'swr'
 import { PageHeader } from '@/components/layout/page-header'
 import { CompassRose } from '@phosphor-icons/react'
 
-const AGENT_API = process.env.NEXT_PUBLIC_AGENT_API_URL
-
 const fetcher = (url: string) =>
-  fetch(url, { cache: 'no-store' }).then((r) => {
+  fetch(url).then((r) => {
     if (!r.ok) throw new Error('unreachable')
     return r.json()
   })
 
 export default function AgentsPage() {
-  const { data, error, isLoading } = useSWR(
-    AGENT_API ? `${AGENT_API}/api/logs/status` : null,
-    fetcher,
-    { refreshInterval: 15_000, shouldRetryOnError: true, errorRetryCount: 2 },
-  )
+  const { data, error, isLoading } = useSWR('/api/agents/status', fetcher, {
+    refreshInterval: 15_000,
+    shouldRetryOnError: true,
+    errorRetryCount: 2,
+  })
 
   const healthy = !error && data?.status === 'ok'
 
@@ -55,7 +53,9 @@ export default function AgentsPage() {
                   <span className="text-text-primary font-medium">Traefik Agent</span>
                 </div>
               </td>
-              <td className="py-3 px-4 text-text-secondary font-mono text-xs">{AGENT_API || 'localhost:5000'}</td>
+              <td className="py-3 px-4 text-text-secondary font-mono text-xs">
+                <span className="select-all">localhost:5000</span>
+              </td>
               <td className="py-3 px-4 text-text-secondary text-xs">Bearer Token</td>
               <td className="py-3 px-4">
                 {isLoading ? (
@@ -76,7 +76,7 @@ export default function AgentsPage() {
 
         {error && (
           <div className="px-4 py-3 bg-accent-red/5 text-xs text-accent-red border-t border-accent-red/10">
-            Cannot reach agent at {AGENT_API || 'localhost:5000'}. Make sure the agent is running.
+            Cannot reach agent. Make sure the agent is running.
           </div>
         )}
       </div>

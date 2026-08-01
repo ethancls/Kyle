@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/utils"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logs"
+	"kyle/agent/internal/utils"
+	"kyle/agent/pkg/logs"
 )
 
 // HandleStatus handles health check requests

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { ServiceInfo } from '@lens/shared'
+import type { ServiceInfo } from '@kyle/shared'
 import { ServicesGrid } from './grid'
 import { RefreshButton } from './refresh-button'
 import { SearchBar } from './search-bar'

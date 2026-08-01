@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logger"
+	"kyle/agent/pkg/logger"
 )
 
 // responseWriter wraps http.ResponseWriter to capture the status code

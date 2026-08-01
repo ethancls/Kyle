@@ -6,65 +6,32 @@ import { MapReset } from './map-reset'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-const countryTraffic: Record<string, { req: number; label: string }> = {
-  USA: { req: 156, label: 'United States' },
-  FRA: { req: 142, label: 'France' },
-  GBR: { req: 128, label: 'United Kingdom' },
-  DEU: { req: 110, label: 'Germany' },
-  JPN: { req: 95, label: 'Japan' },
-  NLD: { req: 80, label: 'Netherlands' },
-  SGP: { req: 65, label: 'Singapore' },
-  CAN: { req: 55, label: 'Canada' },
-  AUS: { req: 48, label: 'Australia' },
-  BRA: { req: 42, label: 'Brazil' },
-  RUS: { req: 35, label: 'Russia' },
-  IND: { req: 30, label: 'India' },
-  KOR: { req: 25, label: 'South Korea' },
-  SWE: { req: 20, label: 'Sweden' },
+interface CountryData {
+  code: string
+  label: string
+  req: number
 }
-const maxTraffic = Math.max(...Object.values(countryTraffic).map(c => c.req))
 
-function getCountryFill(req: number): string {
-  if (req <= 0) return '#1A1A1A'
+function getCountryFill(req: number, maxTraffic: number): string {
+  if (req <= 0 || maxTraffic <= 0) return '#1A1A1A'
   const t = req / maxTraffic
-  const r = Math.round(0x66 - (0x66 - 0x1E) * t)
-  const g = Math.round(0x88 - (0x88 - 0x40) * t)
-  const b = Math.round(0xFF - (0xFF - 0xAF) * t)
-  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`
+  // Blue gradient: light (#6688FF) → deep (#1E40AF)
+  const [r1, g1, b1] = [0x66, 0x88, 0xFF]
+  const [r2, g2, b2] = [0x1E, 0x40, 0xAF]
+  const r = Math.round(r1 + (r2 - r1) * t)
+  const g = Math.round(g1 + (g2 - g1) * t)
+  const b = Math.round(b1 + (b2 - b1) * t)
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
-function TimeFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const options = [
-    { value: '1h', label: 'Last hour' },
-    { value: '24h', label: 'Last 24h' },
-    { value: '7d', label: 'Last 7 days' },
-    { value: '30d', label: 'Last 30 days' },
-  ]
-  return (
-    <div className="flex items-center gap-1.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            value === o.value
-              ? 'bg-primary text-white'
-              : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function Legend() {
+function Legend({ maxTraffic }: { maxTraffic: number }) {
   return (
     <div className="bg-surface/90 backdrop-blur rounded-lg px-3 py-2 text-xs border border-border/50">
-      <div className="text-text-secondary mb-1.5 font-medium">Traffic Intensity</div>
-      <div className="h-2 w-32 rounded" style={{ background: 'linear-gradient(to right, #DBEAFE, #1E40AF)' }} />
+      <div className="text-text-secondary mb-1.5 font-medium">Traffic</div>
+      <div
+        className="h-2 w-32 rounded"
+        style={{ background: 'linear-gradient(to right, #6688FF, #1E40AF)' }}
+      />
       <div className="flex justify-between text-[10px] text-text-muted mt-0.5">
         <span>0</span>
         <span>{maxTraffic} req</span>
@@ -75,29 +42,59 @@ function Legend() {
 
 export default function MapClient() {
   const [geoData, setGeoData] = useState<any>(null)
-  const [timeRange, setTimeRange] = useState('24h')
+  const [countryTraffic, setCountryTraffic] = useState<CountryData[]>([])
+  const [maxTraffic, setMaxTraffic] = useState(0)
+  const [loading, setLoading] = useState(true)
 
+  // Fetch GeoJSON geometry (static, cached by CDN)
   useEffect(() => {
     fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
-      .then(r => r.json())
+      .then((r) => r.json())
       .then(setGeoData)
   }, [])
 
+  // Fetch real traffic data from SQLite + GeoIP
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch('/api/stats/geo')
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        setCountryTraffic(data.countries ?? [])
+        setMaxTraffic(data.maxTraffic ?? 0)
+      } catch {
+        /* geo unavailable — map still renders */
+      }
+      if (!cancelled) setLoading(false)
+    }
+    load()
+    const interval = setInterval(load, 60_000) // refresh every 60s (GeoIP is slow)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [])
+
+  // Build lookup map for O(1) style access
+  const trafficMap: Record<string, CountryData> = {}
+  for (const c of countryTraffic) {
+    trafficMap[c.code] = c
+  }
+
   const style = (feature: any) => {
     const iso = feature?.properties?.ISO_A3
-    const c = iso ? countryTraffic[iso] : null
+    const c = iso ? trafficMap[iso] : undefined
     return {
-      fillColor: getCountryFill(c ? c.req : 0),
+      fillColor: getCountryFill(c ? c.req : 0, maxTraffic),
       weight: 0.3,
       color: '#333',
       opacity: 0.4,
-      fillOpacity: 1,
+      fillOpacity: c ? 1 : 0.2,
     }
   }
 
   const onEachFeature = (feature: any, layer: L.Layer) => {
     const iso = feature?.properties?.ISO_A3
-    const c = iso ? countryTraffic[iso] : null
+    const c = iso ? trafficMap[iso] : undefined
     if (c) {
       layer.bindTooltip(`${c.label}: ${c.req} req`, {
         sticky: true,
@@ -109,12 +106,17 @@ export default function MapClient() {
 
   return (
     <div className="w-full h-[500px] md:h-[650px] relative">
-      <div className="absolute top-4 left-4 z-[1000]">
-        <TimeFilter value={timeRange} onChange={setTimeRange} />
-      </div>
+      {/* Map info overlay */}
+      {!loading && (
+        <div className="absolute top-4 left-4 z-[1000] text-xs text-text-muted bg-surface/80 backdrop-blur rounded-lg px-3 py-1.5 border border-border/50">
+          {countryTraffic.length > 0
+            ? `${countryTraffic.length} countries`
+            : 'No traffic data yet'}
+        </div>
+      )}
 
       <div className="absolute bottom-6 right-3 z-[1000]">
-        <Legend />
+        <Legend maxTraffic={maxTraffic} />
       </div>
 
       <MapContainer

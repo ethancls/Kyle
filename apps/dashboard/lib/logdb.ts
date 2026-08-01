@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import path from 'path'
+import fs from 'fs'
 
 const DB_PATH = path.join(process.cwd(), 'data', 'kyle.db')
 
@@ -7,7 +8,6 @@ let db: Database.Database | null = null
 
 function getDb(): Database.Database {
   if (!db) {
-    const fs = require('fs')
     const dir = path.dirname(DB_PATH)
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
@@ -28,11 +28,25 @@ function getDb(): Database.Database {
         router TEXT,
         service TEXT,
         raw_json TEXT,
+        dedup_key TEXT,
         created_at TEXT DEFAULT (datetime('now'))
       );
       CREATE INDEX IF NOT EXISTS idx_logs_time ON access_logs(timestamp);
       CREATE INDEX IF NOT EXISTS idx_logs_status ON access_logs(status);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_logs_dedup ON access_logs(dedup_key);
     `)
+
+    // Migration: add dedup_key column to existing databases
+    try {
+      db.exec(`ALTER TABLE access_logs ADD COLUMN dedup_key TEXT`)
+    } catch {
+      // Column already exists — migration was applied previously
+    }
+    try {
+      db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_logs_dedup ON access_logs(dedup_key)`)
+    } catch {
+      // Index already exists
+    }
   }
   return db
 }
@@ -41,19 +55,32 @@ function getDb(): Database.Database {
 export function insertLogs(logs: any[]) {
   const conn = getDb()
   const stmt = conn.prepare(`
-    INSERT INTO access_logs (timestamp, method, path, status, client_ip, duration_ms, host, router, service, raw_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO access_logs (timestamp, method, path, status, client_ip, duration_ms, host, router, service, raw_json, dedup_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
+
+  // Simple hash function for dedup key
+  function hash(s: string): string {
+    let h = 0
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) - h + s.charCodeAt(i)) | 0
+    }
+    return (h >>> 0).toString(16).padStart(8, '0')
+  }
 
   const insert = conn.transaction((entries: any[]) => {
     for (const l of entries) {
       const clientIp = (l.ClientHost || '').split(',')[0].trim()
       const durationMs = (l.Duration || 0) / 1_000_000
+      const timestamp = l.StartUTC || l.StartLocal || l.time || new Date().toISOString()
+      const method = l.RequestMethod || ''
+      const path = l.RequestPath || ''
+      const dedupKey = hash(`${timestamp}|${clientIp}|${path}|${method}`)
 
       stmt.run(
-        l.StartUTC || l.StartLocal || l.time || new Date().toISOString(),
-        l.RequestMethod || '',
-        l.RequestPath || '',
+        timestamp,
+        method,
+        path,
         l.DownstreamStatus || 0,
         clientIp,
         durationMs,
@@ -61,6 +88,7 @@ export function insertLogs(logs: any[]) {
         l.RouterName || '',
         l.ServiceName || '',
         JSON.stringify(l),
+        dedupKey,
       )
     }
   })
@@ -107,7 +135,7 @@ export function queryLogs(opts: {
   return { logs: rows, total: count.total }
 }
 
-// Analytics
+// Analytics — all aggregation runs in SQL, not JS
 export function getStats() {
   const conn = getDb()
 
@@ -136,6 +164,41 @@ export function getStats() {
     FROM access_logs
   `).get() as any
 
+  // Requests per minute from time range
+  const range = conn
+    .prepare("SELECT MIN(timestamp) as first, MAX(timestamp) as last FROM access_logs WHERE timestamp != ''")
+    .get() as { first: string | null; last: string | null }
+
+  let requestsPerMinute = 0
+  if (range.first && range.last) {
+    const rangeMs = new Date(range.last).getTime() - new Date(range.first).getTime()
+    requestsPerMinute = Math.round((total / Math.max(rangeMs / 60_000, 1)) * 100) / 100
+  }
+
+  // Hourly breakdown for time-series charts (last 24h)
+  const hourly = conn
+    .prepare(
+      `SELECT strftime('%H', timestamp) as hour, COUNT(*) as count,
+              ROUND(AVG(duration_ms), 1) as avg_latency
+       FROM access_logs
+       WHERE timestamp >= datetime('now', '-24 hours')
+       GROUP BY strftime('%H', timestamp)
+       ORDER BY hour`,
+    )
+    .all() as { hour: string; count: number; avg_latency: number }[]
+
+  const requestsByHour = Array.from({ length: 24 }, (_, i) => {
+    const h = String(i).padStart(2, '0')
+    const row = hourly.find((r) => r.hour === h)
+    return { hour: `${i}h`, count: row?.count ?? 0 }
+  })
+
+  const latencyByHour = Array.from({ length: 24 }, (_, i) => {
+    const h = String(i).padStart(2, '0')
+    const row = hourly.find((r) => r.hour === h)
+    return { hour: `${i}h`, avgLatency: row?.avg_latency ?? 0 }
+  })
+
   return {
     totalRequests: total,
     statusBreakdown: {
@@ -146,6 +209,9 @@ export function getStats() {
     },
     avgLatencyMs: avgLat ? (avgLat as number).toFixed(1) : '0',
     errorRate: total > 0 ? Math.round(((statusBreakdown.s5xx || 0) / total) * 1000) / 10 : 0,
+    requestsPerMinute,
+    requestsByHour,
+    latencyByHour,
     latencyDist: [
       { bucket: '0-5ms', count: dist.d1 || 0 },
       { bucket: '5-10ms', count: dist.d2 || 0 },
@@ -156,4 +222,120 @@ export function getStats() {
       { bucket: '200ms+', count: dist.d7 || 0 },
     ],
   }
+}
+
+// Full analytics payload for the /api/analytics endpoint.
+// Runs every query in a single DB call via SQL aggregations — no in-memory loops.
+export function getAnalytics() {
+  const conn = getDb()
+
+  const total = (
+    conn.prepare('SELECT COUNT(*) as n FROM access_logs').get() as { n: number }
+  ).n
+
+  if (total === 0) {
+    return {
+      totalRequests: 0,
+      statusBreakdown: { '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0 },
+      topPaths: [] as { path: string; count: number }[],
+      topHosts: [] as { host: string; count: number }[],
+      avgLatencyMs: 0,
+      requestsPerMinute: 0,
+    }
+  }
+
+  const statusBreakdown = conn
+    .prepare(
+      `SELECT
+        COALESCE(SUM(CASE WHEN status >= 200 AND status < 300 THEN 1 ELSE 0 END), 0) as s2xx,
+        COALESCE(SUM(CASE WHEN status >= 300 AND status < 400 THEN 1 ELSE 0 END), 0) as s3xx,
+        COALESCE(SUM(CASE WHEN status >= 400 AND status < 500 THEN 1 ELSE 0 END), 0) as s4xx,
+        COALESCE(SUM(CASE WHEN status >= 500 THEN 1 ELSE 0 END), 0) as s5xx
+      FROM access_logs`,
+    )
+    .get() as { s2xx: number; s3xx: number; s4xx: number; s5xx: number }
+
+  const avgLatencyMs = Math.round(
+    ((conn
+      .prepare('SELECT AVG(duration_ms) as v FROM access_logs')
+      .get() as { v: number | null }).v ?? 0) * 100,
+  ) / 100
+
+  const topPaths = (
+    conn
+      .prepare(
+        'SELECT path, COUNT(*) as count FROM access_logs GROUP BY path ORDER BY count DESC LIMIT 10',
+      )
+      .all() as { path: string; count: number }[]
+  ).map((r) => ({ path: r.path.length > 60 ? r.path.slice(0, 60) + '…' : r.path, count: r.count }))
+
+  const topHosts = (
+    conn
+      .prepare(
+        'SELECT host, COUNT(*) as count FROM access_logs GROUP BY host ORDER BY count DESC LIMIT 10',
+      )
+      .all() as { host: string; count: number }[]
+  ).map((r) => ({ host: r.host || '—', count: r.count }))
+
+  // Requests per minute = total / time range in minutes
+  const range = conn
+    .prepare(
+      "SELECT MIN(timestamp) as first, MAX(timestamp) as last FROM access_logs WHERE timestamp != ''",
+    )
+    .get() as { first: string | null; last: string | null }
+
+  let requestsPerMinute = 0
+  if (range.first && range.last) {
+    const rangeMs =
+      new Date(range.last).getTime() - new Date(range.first).getTime()
+    const rangeMinutes = Math.max(rangeMs / 60_000, 1)
+    requestsPerMinute = Math.round((total / rangeMinutes) * 100) / 100
+  } else {
+    requestsPerMinute = total
+  }
+
+  return {
+    totalRequests: total,
+    statusBreakdown: {
+      '2xx': statusBreakdown.s2xx,
+      '3xx': statusBreakdown.s3xx,
+      '4xx': statusBreakdown.s4xx,
+      '5xx': statusBreakdown.s5xx,
+    },
+    topPaths,
+    topHosts,
+    avgLatencyMs,
+    requestsPerMinute,
+  }
+}
+
+// ── Geo traffic for the map ───────────────────────────────────
+
+/** Returns the top unique IPs from recent logs for GeoIP resolution. */
+export function getRecentClientIPs(limit = 500): string[] {
+  const conn = getDb()
+  const rows = conn
+    .prepare('SELECT DISTINCT client_ip FROM access_logs ORDER BY id DESC LIMIT ?')
+    .all(limit) as { client_ip: string }[]
+  return rows.map((r) => r.client_ip).filter(Boolean)
+}
+
+/**
+ * Returns country-level traffic counts from cached GeoIP data.
+ * Caller should pass pre-resolved `{ ip: countryCode }` map.
+ */
+export function getTrafficByCountry(ipCountryMap: Record<string, string>): Record<string, number> {
+  const conn = getDb()
+  const rows = conn
+    .prepare('SELECT client_ip FROM (SELECT DISTINCT client_ip FROM access_logs ORDER BY id DESC LIMIT 1000)')
+    .all() as { client_ip: string }[]
+
+  const countryCounts: Record<string, number> = {}
+  for (const { client_ip } of rows) {
+    const country = ipCountryMap[client_ip]
+    if (country) {
+      countryCounts[country] = (countryCounts[country] || 0) + 1
+    }
+  }
+  return countryCounts
 }

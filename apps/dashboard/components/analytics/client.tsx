@@ -12,16 +12,8 @@ import {
   Cell,
 } from 'recharts'
 import { ArrowCounterClockwise } from '@phosphor-icons/react'
-import { cn } from '@lens/ui'
-
-interface AnalyticsData {
-  totalRequests: number
-  statusBreakdown: Record<string, number>
-  topPaths: { path: string; count: number }[]
-  topHosts: { host: string; count: number }[]
-  avgLatencyMs: number
-  requestsPerMinute: number
-}
+import { cn } from '@kyle/ui'
+import type { AnalyticsData } from '@kyle/shared'
 
 const STATUS_COLORS: Record<string, string> = {
   '2xx': '#00B4A0',
@@ -101,7 +93,8 @@ export function AnalyticsClient() {
       if (json.error) throw new Error(json.error)
       setData(json as AnalyticsData)
       setError(null)
-    } catch {
+    } catch (err) {
+      console.error('[AnalyticsClient] fetch failed:', err)
       setError('Failed to load analytics')
     }
     setLoading(false)

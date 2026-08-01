@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/config"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/state"
+	"kyle/agent/internal/config"
+	"kyle/agent/internal/state"
 )
 
 func TestHandleStreamAccessLogs(t *testing.T) {

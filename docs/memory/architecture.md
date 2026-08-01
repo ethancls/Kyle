@@ -1,4 +1,4 @@
-# Lens Architecture
+# Kyle Architecture
 
 ## Stack
 
@@ -14,7 +14,7 @@
 ## Monorepo Structure
 
 ```
-Lens/
+Kyle/
 ├── apps/
 │   ├── dashboard/            # Next.js 15 App Router (port 3000)
 │   └── agent/                # Go agent (port 5000)

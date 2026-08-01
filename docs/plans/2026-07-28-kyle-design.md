@@ -1,4 +1,4 @@
-# Lens — Traefik Traffic Dashboard — Design Spec
+# Kyle — Traefik Traffic Dashboard — Design Spec
 
 **Date:** 2026-07-28
 **Status:** Approved
@@ -13,7 +13,7 @@ Professional Traefik log analytics dashboard with UniFi-inspired design system, 
 Monorepo Turborepo structure:
 
 ```
-Lens/
+Kyle/
 ├── apps/
 │   ├── dashboard/            # Next.js 15 App Router
 │   └── agent/                # Go agent (forked + extended)
@@ -53,7 +53,7 @@ Lens/
 | `surface` | `#111827` | Cards, modals, sidebars |
 | `surface-raised` | `#1A2332` | Hover states, dropdowns |
 | `border` | `#1E2D3D` | Subtle borders |
-| `primary` | `#0088CC` | Lens blue, buttons, links |
+| `primary` | `#0088CC` | Kyle blue, buttons, links |
 | `primary-glow` | `#00A3E0` | Active states, glow effects |
 | `accent-teal` | `#00B4A0` | Success, OK statuses |
 | `accent-orange` | `#F59E0B` | Warnings |
@@ -117,7 +117,7 @@ Traefik access logs
        ↓
    REST API (:5000)
        ↓
-   Lens Dashboard Next.js (SWR cache)
+   Kyle Dashboard Next.js (SWR cache)
        ↓
    Remote actions → Agent Go → Docker / Traefik
 ```

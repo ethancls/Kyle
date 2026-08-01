@@ -1,4 +1,4 @@
-module github.com/hhftechnology/traefik-log-dashboard/agent
+module kyle/agent
 
 go 1.23.0
 

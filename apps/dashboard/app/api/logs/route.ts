@@ -1,47 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { insertLogs, queryLogs } from '@/lib/logdb'
+import { agentFetch } from '@/lib/agent'
 
-const AGENT_API = process.env.AGENT_API_URL
-const AGENT_TOKEN = process.env.AGENT_API_TOKEN
-
-if (!AGENT_API) throw new Error('Missing AGENT_API_URL')
-if (!AGENT_TOKEN) throw new Error('Missing AGENT_API_TOKEN')
-
+/**
+ * GET /api/logs
+ *
+ * Returns live access logs directly from the Go agent.
+ * Also writes logs to SQLite in the background for history/analytics.
+ *
+ * Query params: ?limit= (default 500, max 2000)
+ */
 export async function GET(req: NextRequest) {
-  const s = req.nextUrl.searchParams
-  const method = s.get('method')
-  const status = s.get('status')
-  const path = s.get('path')
-  const limit = s.get('limit') ?? '500'
-  const offset = s.get('offset') ?? '0'
+  const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') ?? '500'), 2000)
 
-  // Try to fetch fresh logs from agent
   try {
-    const res = await fetch(`${AGENT_API}/api/logs/access?limit=${limit}`, {
-      headers: { Authorization: `Bearer ${AGENT_TOKEN}` },
-      cache: 'no-store',
-    })
+    const data = await agentFetch<{ logs: any[]; positions: any[] }>(
+      `/api/logs/access?limit=${limit}&position=0`,
+    )
 
-    if (res.ok) {
-      const data = await res.json()
-      const logs = data.logs ?? []
-
-      // Persist to SQLite in background
-      if (logs.length > 0) {
-        try { insertLogs(logs) } catch { /* non-blocking */ }
-      }
-
-      // Return fresh data
-      const result = queryLogs({ method: method || undefined, status: status || undefined, path: path || undefined, limit: 100, offset: Number(offset) })
-      return NextResponse.json(result)
+    // Non-blocking background sync to SQLite
+    if (data.logs && data.logs.length > 0) {
+      import('@/lib/logdb')
+        .then(({ insertLogs }) => insertLogs(data.logs))
+        .catch((err) => console.error('[api/logs] background sync failed:', err))
     }
-  } catch { /* fall through to DB */ }
 
-  // Fallback: serve from SQLite
-  try {
-    const result = queryLogs({ method: method || undefined, status: status || undefined, path: path || undefined, limit: 100, offset: Number(offset) })
-    return NextResponse.json(result)
-  } catch {
-    return NextResponse.json({ error: 'Agent and DB unreachable' }, { status: 502 })
+    return NextResponse.json(data)
+  } catch (err) {
+    console.error('[api/logs] agent fetch failed:', err)
+    return NextResponse.json({ logs: [], error: 'Agent unreachable' }, { status: 502 })
   }
 }

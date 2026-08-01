@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/config"
-	"github.com/hhftechnology/traefik-log-dashboard/agent/pkg/logger"
+	"kyle/agent/internal/config"
+	"kyle/agent/pkg/logger"
 )
 
 // StateManager manages application state, specifically file positions
